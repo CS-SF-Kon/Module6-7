@@ -1,6 +1,4 @@
-﻿using System.Net;
-
-namespace Module6_7
+﻿namespace Module6_7
 {
     abstract class Customer // свой абстрактный класс
     {
@@ -19,13 +17,24 @@ namespace Module6_7
     
     class PrivateUser : Customer // свой класс 2 + наследование
     {
-        protected string CustomerName { get; set; }
+        private string customerName;
+        protected string CustomerName
+        {
+            get
+            {
+                return customerName;
+            }
+            set
+            {
+                customerName = string.IsNullOrEmpty(value) ? "NoName" : value; // логика в сеттере - пустое поле имени при создании заказчика превратится в "NoName"
+            }
+        }
         public PrivateUser(string CustomerName, string address, string type = "Private user") : base(type, address)
         {
             this.CustomerName = CustomerName;
         }
 
-        public override string CustomerInfo()
+        public override string CustomerInfo() // переопределение абстрактного метода
         {
             return string.Concat(Type, " ", ID, " ", CustomerName, " ", Address);
         }
@@ -108,6 +117,7 @@ namespace Module6_7
         where TDelivery : Delivery
         where TPosition : struct
     {
+        public static int TotalOrders; // статическое поле - будет отслеживать общее количество заказов всех видов и всех пользователей
         public TDelivery Delivery;
         private Customer customer;
         public byte PosCount;
@@ -132,7 +142,8 @@ namespace Module6_7
             Number = Guid.NewGuid();
             this.PosCount = PosCount;
             Positions = new TPosition[this.PosCount]; // композиция (используется, правда, не класс, а структура) - перечень заказываемого не может существовать без заказа в целом
-            this.customer = customer; // агрегация - заказчик может иметь несколько заказов, а, занчит, должен существовать не зависимо от заказа
+            this.customer = customer; // агрегация - заказчик может иметь несколько заказов, а, значит, должен существовать не зависимо от заказа
+            TotalOrders++;
         }
     }
 
@@ -150,7 +161,7 @@ namespace Module6_7
             {
                 order.Positions[i] = new Position("PC","Asus",499.9F,2);
             }
-            order.Description = $"Order {order.Number} to {order.Delivery.Address}. Type of delivery - {order.Delivery.TypeOFDel()}";
+            order.Description = $"Order {order.Number} to {order.Delivery.Address}. Type of delivery - {order.Delivery.TypeOFDel()}"; // насколько адекватно делать так, типа "вот эту часть экземлляра соберу в конструкторе, а вот эту - вне конструктора"? наверное, не очень...
             return order;
         }
         static void Main(string[] args)
@@ -170,9 +181,14 @@ namespace Module6_7
             {
                 Console.WriteLine(position.Model);
             }
-            
+
+            Customer fourth_customer = new PrivateUser(CustomerName: "", address: "Unknown");
+            Console.WriteLine(fourth_customer.CustomerInfo());
             
             Console.WriteLine(ord1.Description);
+
+            var ord2 = OrderMaker(second_customer);
+            Console.WriteLine(Order<Delivery, Position>.TotalOrders);
         }
     }
 }
