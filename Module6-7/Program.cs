@@ -65,7 +65,7 @@
         }
     }
 
-    struct Position
+    class Position
     {
         public string Type;
         public string Model;
@@ -83,39 +83,39 @@
         }
     }
 
-    abstract class Delivery
+    abstract class Delivery<T>
     {
-        public string Address;
-        public abstract string TypeOFDel(); // абстрактный метод
+        public T Address; // наследование обобщения
+        public abstract string TypeOfDel(); // абстрактный метод
     }
 
-    class HomeDelivery : Delivery
+    class HomeDelivery : Delivery<string> // наследование обобщения - бессмысленное (в данном случае) и беспощадное 
     {
-        public override string TypeOFDel() // переопределение метода
+        public override string TypeOfDel() // переопределение метода
         {
             return "Delivery to user's home";
         }
     }
     
-    class PickPiontDelivery : Delivery 
+    class PickPointDelivery : Delivery<string>
     {
-        public override string TypeOFDel()
+            public override string TypeOfDel()
         {
             return "Delivery to nearest Pick-point";
         }
     }
 
-    class ShopDelivery : Delivery
+    class ShopDelivery : Delivery<string>
     {
-        public override string TypeOFDel()
+        public override string TypeOfDel()
         {
             return "Delivery to nearest shop";
         }
     }
 
     class Order<TDelivery, TPosition> // обобщения
-        where TDelivery : Delivery
-        where TPosition : struct
+        where TDelivery : Delivery<string>
+        where TPosition : Position
     {
         public static int TotalOrders; // статическое поле - будет отслеживать общее количество заказов всех видов и всех пользователей
         public TDelivery Delivery;
@@ -142,28 +142,55 @@
             Number = Guid.NewGuid();
             this.PosCount = PosCount;
             Positions = new TPosition[this.PosCount]; // композиция (используется, правда, не класс, а структура) - перечень заказываемого не может существовать без заказа в целом
-            this.customer = customer; // агрегация - заказчик может иметь несколько заказов, а, значит, должен существовать не зависимо от заказа
+            this.customer = customer; // агрегация - заказчик может иметь несколько заказов, а, значит, должен существовать независимо от заказа
             TotalOrders++;
+        }
+
+        public Position this[int index] // индексктор курильщика
+        {
+            get
+            {
+                return Positions[index];
+            }
+        }
+    }
+
+    static class OrderShortNum
+    {
+        public static void ShortNum(this string Num) // метод расширения, выводит укороченный номер заказа
+        {
+            Console.Write(Num.Substring(0, 8));
         }
     }
 
     internal class Program
     {
-        static Order<Delivery, Position> OrderMaker(Customer customer)
+        public static void Func<T>(ref T ord) // обобщённый метод, тоже бессмысленный
         {
-            var order = new Order<Delivery, Position>(PosCount:2, customer: customer);
+            Console.WriteLine(ord.GetType());
+        }
+
+        static Order<Delivery<string>, Position> OrderMaker(Customer customer)
+        {
+            var order = new Order<Delivery<string>, Position>(PosCount:3, customer: customer);
 
             order.Delivery = new HomeDelivery
             {
                 Address = customer.Address
             };
-            for (int i = 0; i < order.PosCount; i++)
-            {
-                order.Positions[i] = new Position("PC","Asus",499.9F,2);
-            }
-            order.Description = $"Order {order.Number} to {order.Delivery.Address}. Type of delivery - {order.Delivery.TypeOFDel()}"; // насколько адекватно делать так, типа "вот эту часть экземлляра соберу в конструкторе, а вот эту - вне конструктора"? наверное, не очень...
+
+            order.Positions = new Position[] {new Position("Laptop", "Asus", 499.0F, 1), new Position("PC", "Dell", 599.9F, 2)}; // да, 
+
+            //for (int i = 0; i < order.PosCount; i++)
+            //{
+            //    order.Positions[i] = new Position("PC","Asus",499.9F,2);
+            //}
+            
+
+            order.Description = $"Order {order.Number} to {order.Delivery.Address}. Type of delivery - {order.Delivery.TypeOfDel()}"; // насколько адекватно делать так, типа "вот эту часть экземлляра соберу в конструкторе, а вот эту - вне конструктора"? наверное, не очень...
             return order;
         }
+
         static void Main(string[] args)
         {
             Customer new_customer = new PrivateUser(CustomerName: "Dmitry", address: "Moscow");
@@ -182,13 +209,21 @@
                 Console.WriteLine(position.Model);
             }
 
+            Position pos = ord1[1]; // вызов индексатора
+            Console.WriteLine(pos.Model + " " + pos.Count);
+
             Customer fourth_customer = new PrivateUser(CustomerName: "", address: "Unknown");
             Console.WriteLine(fourth_customer.CustomerInfo());
             
             Console.WriteLine(ord1.Description);
 
+            Func<Order<Delivery<string>, Position>>(ref ord1); // вызов обобщённого метода (почему параметр внутри "<>" тусклый, как-будто не обязательный?)
+
             var ord2 = OrderMaker(second_customer);
-            Console.WriteLine(Order<Delivery, Position>.TotalOrders);
+            Console.WriteLine(Order<Delivery<string>, Position>.TotalOrders); // вызов статического метода
+
+            string shortnum = Convert.ToString(ord1.Number);
+            shortnum.ShortNum(); // вызов метода расширения
         }
     }
 }
